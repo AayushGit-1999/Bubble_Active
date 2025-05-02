@@ -75,7 +75,7 @@ export default function Dashboard() {
       case 'tablet':
         return '📱';
       default:
-        return '💻';
+        return '';
     }
   };
 

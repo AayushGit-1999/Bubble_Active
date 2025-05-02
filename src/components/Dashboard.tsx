@@ -6,18 +6,32 @@ import { FileText, LogOut } from 'lucide-react';
 import frame16 from '../Assets/Frame 16.png';
 import DownArrow from '../Assets/svg/Advanced';
 import { useAuthState } from 'react-firebase-hooks/auth'; // Added for auth state
+import axios from 'axios';
+import moment from 'moment';
+
+// Define the type for session data
+type Session = {
+  sessionId: string;
+  deviceType: string; // Ensure deviceType exists in the response
+  deviceName: string; // Ensure deviceName exists in the response
+  createdAt: string;  // Ensure createdAt exists in the response (ISO string or timestamp)
+};
 
 export default function Dashboard() {
   const [isLoggedIn, setIsLoggedIn] = useState(true);
   // Get authenticated user data
   const [user] = useAuthState(auth);
-  
+
   // Update userData to use Firebase user information
   const [userData, setUserData] = useState({
-    name: "",
-    email: "",
-    photoUrl: "/api/placeholder/60"
+    name: '',
+    email: '',
+    photoUrl: '/api/placeholder/60',
   });
+
+  // Define sessions state with the proper type
+  const [sessions, setSessions] = useState<Session[]>([]);
+  const [deviceType, setDeviceType] = useState<string>(''); // State to store device type
 
   const navigate = useNavigate();
 
@@ -27,8 +41,20 @@ export default function Dashboard() {
       setUserData({
         name: user.displayName || user.email?.split('@')[0] || 'User', // Fallback to email username if no display name
         email: user.email || '',
-        photoUrl: user.photoURL || "/api/placeholder/60" // Fallback to placeholder if no photo
+        photoUrl: user.photoURL || '/api/placeholder/60', // Fallback to placeholder if no photo
       });
+
+      // Fetch active sessions when the user is authenticated
+      const fetchSessions = async () => {
+        try {
+          const response = await axios.get('/api/users/me'); // Adjust the endpoint as needed
+          setSessions(response.data.sessions);  // Set sessions from the API response
+        } catch (error) {
+          console.error('Error fetching sessions:', error);
+        }
+      };
+
+      fetchSessions();
     }
   }, [user]);
 
@@ -40,9 +66,52 @@ export default function Dashboard() {
     navigate('/upgrade');
   };
 
-  const fontStyle = {
-    fontFamily: '"Century Gothic", CenturyGothic, AppleGothic, sans-serif'
+  const getDeviceIcon = (deviceType: string) => {
+    switch (deviceType) {
+      case 'desktop':
+        return '🖥️';
+      case 'smartphone':
+        return '📱';
+      case 'tablet':
+        return '📱';
+      default:
+        return '💻';
+    }
   };
+
+  const fontStyle = {
+    fontFamily: '"Century Gothic", CenturyGothic, AppleGothic, sans-serif',
+  };
+
+  const getDeviceType = () => {
+    const userAgent = navigator.userAgent.toLowerCase();
+  
+    // Check for mobile devices
+    if (/iphone|ipod|android/i.test(userAgent)) {
+      setDeviceType('Mobile');
+      return 'Mobile';
+    }
+  
+    // Check for tablet devices
+    if (/ipad|tablet/i.test(userAgent)) {
+      setDeviceType('Tablet');
+      return 'Tablet';
+    }
+  
+    // Check for desktop devices
+    if (/windows|macintosh/i.test(userAgent)) {
+      setDeviceType('desktop');
+      return 'Desktop';
+    }
+    // Check for other devices  
+    setDeviceType('Unknown');
+    return 'Unknown';
+  };
+
+  useEffect(() => {
+    const device = getDeviceType();
+    setDeviceType(device); 
+  }, []); 
 
   return (
     <div className="flex flex-col min-h-screen bg-black text-white" style={fontStyle}>
@@ -67,7 +136,7 @@ export default function Dashboard() {
               onClick={handleSignOut}
               className="text-sm font-bold px-3 py-1 rounded-md border border-gray-700 flex items-center gap-1"
             >
-              <span className='w-[70px]'>Sign out</span> {/* Changed from Sign in to Sign out */}
+              <span className="w-[70px]">Sign out</span> {/* Changed from Sign in to Sign out */}
             </button>
           ) : (
             <button
@@ -161,7 +230,7 @@ export default function Dashboard() {
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-lg font-medium">Account</h2>
                 <div className="text-xs px-3 py-1 rounded-full text-gray-100">
-                  <span className='text-sm font-medium'>Pro Trial </span>
+                  <span className="text-sm font-medium">Pro Trial </span>
                   <span className="text-gray-400">9 days remaining</span>
                 </div>
               </div>
@@ -187,51 +256,27 @@ export default function Dashboard() {
             <div className="bg-black text-white p-5 rounded-lg max-w-md bg-zinc-900 w-[400px]">
               <h2 className="text-xl font-medium mb-6">Active Sessions</h2>
 
-              {/* Session Item 1 */}
-              <div className="bg-zinc rounded-lg p-4 mb-3 flex items-center justify-between bg-zinc-800">
-                <div className="flex items-center gap-3">
-                  <div className="w-5 h-8 bg-transparent rounded flex items-center justify-center opacity-70">
-                    <svg width="15" height="20" viewBox="0 0 15 20" fill="none" xmlns="http://www.w3.org/2000/svg">
-                      <path d="M6 4H9M11.786 1H3.214C2.268 1 1.5 1.806 1.5 2.8V17.2C1.5 18.194 2.268 19 3.214 19H11.786C12.733 19 13.5 18.194 13.5 17.2V2.8C13.5 1.806 12.733 1 11.786 1Z"
-                        stroke="white"
-                        strokeOpacity="0.3"
-                        strokeWidth="1.5"
-                        strokeLinecap="round"
-                        strokeLinejoin="round" />
-                    </svg>
+              {deviceType ? (
+                // sessions.map((session) => (
+                  <div
+                    // key={session.sessionId}
+                    className="bg-zinc rounded-lg p-4 mb-3 flex items-center justify-between bg-zinc-800"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="w-5 h-8 text-gray-100">
+                        {getDeviceIcon(deviceType)}
+                      </div>
+                      <div className="flex flex-col text-xs">
+                        <p>{deviceType}</p>
+                        {/* <p className="text-gray-400">{moment(session.createdAt).fromNow()}</p> */}
+                      </div>
+                    </div>
+                    <div className="text-xs">{deviceType}</div>
                   </div>
-                  <div>
-                    <p className="text-white text-sm font-medium">Web Session</p>
-                    <p className="text-gray-500 text-xs">Created 5 days ago</p>
-                  </div>
-                </div>
-                <button className="bg-black text-white text-xs font-medium px-4 py-1 rounded border border-zinc-600 h-[30px] w-[75px]">
-                  Revoke
-                </button>
-              </div>
-
-              {/* Session Item 2 */}
-              <div className="bg-zinc rounded-lg p-4 mb-5 flex items-center justify-between bg-zinc-800">
-                <div className="flex items-center gap-3">
-                  <div className="w-5 h-8 bg-transparent rounded flex items-center justify-center opacity-70">
-                    <svg width="15" height="20" viewBox="0 0 15 20" fill="none" xmlns="http://www.w3.org/2000/svg">
-                      <path d="M6 4H9M11.786 1H3.214C2.268 1 1.5 1.806 1.5 2.8V17.2C1.5 18.194 2.268 19 3.214 19H11.786C12.733 19 13.5 18.194 13.5 17.2V2.8C13.5 1.806 12.733 1 11.786 1Z"
-                        stroke="white"
-                        strokeOpacity="0.3"
-                        strokeWidth="1.5"
-                        strokeLinecap="round"
-                        strokeLinejoin="round" />
-                    </svg>
-                  </div>
-                  <div>
-                    <p className="text-white text-sm font-medium">Web Session</p>
-                    <p className="text-gray-500 text-xs">Created 5 days ago</p>
-                  </div>
-                </div>
-                <button className="bg-black text-white text-xs font-medium px-4 py-1 border border-zinc-600 rounded h-[30px] w-[75px]">
-                  Revoke
-                </button>
-              </div>
+                
+              ) : (
+                <div className="text-gray-400 text-xs">No active sessions</div>
+              )}
 
               {/* Note */}
               <p className="text-center text-gray-500 text-xs px-6">
@@ -258,9 +303,9 @@ export default function Dashboard() {
               <span className="font-bold text-2xl">air bubble</span>
             </div>
             <p className="text-xs text-gray-400 mt-2">
-              Air bubble is the AI-powered platform that makes Minecraft moddding instant <br /> and accessible to everyone. Simply describe your desired mods, and watch <br />them come to life in your game within seconds, opening up a universe of <br />personalized experiences.
+              Air bubble is the AI-powered platform that makes Minecraft modding instant <br /> and accessible to everyone. Simply describe your desired mods, and watch <br /> them come to life in your game within seconds, opening up a universe of <br /> personalized experiences.
             </p>
-            <img className='h-[20px] mt-4' src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcS2nHeo6lNQM6sO5waCE4RNZlU-bnGWdc7RAg&s" alt="" />
+            <img className="h-[20px] mt-4" src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcS2nHeo6lNQM6sO5waCE4RNZlU-bnGWdc7RAg&s" alt="" />
           </div>
 
           <div className="grid grid-cols-2 md:grid-cols-2 gap-[160px] relative right-[20%] bottom-[-19px]">
@@ -287,7 +332,7 @@ export default function Dashboard() {
         </div>
 
         <div className="flex justify-end mt-10 text-xs text-white text-bold relative bottom-[-50px] right-[44%]">
-          Made with ♥️ in The <span className='h-auto w-[20px]'><img src={frame16} alt="airbubble logo" /></span> bubble
+          Made with ♥️ in The <span className="h-auto w-[20px]"><img src={frame16} alt="airbubble logo" /></span> bubble
         </div>
       </footer>
     </div>

@@ -27,7 +27,6 @@ const MinecraftAuthPage: React.FC<MinecraftAuthPageProps> = ({ mode = 'login' })
   const [showForm, setShowForm] = useState(true);
   const [loading, setLoading] = useState(false);
 
-  // Store redirect_url from query params on mount
   useEffect(() => {
     const urlParam = searchParams.get('redirect_url');
     if (urlParam) {
@@ -50,10 +49,13 @@ const MinecraftAuthPage: React.FC<MinecraftAuthPageProps> = ({ mode = 'login' })
     provider?: string
   ) => {
     const sessionId = generateSessionId();
+    const userAgent = navigator.userAgent;
+
     const response = await fetch('/api/users', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        'User-Agent': userAgent,
       },
       body: JSON.stringify({
         firebaseUid: uid,
@@ -69,7 +71,6 @@ const MinecraftAuthPage: React.FC<MinecraftAuthPageProps> = ({ mode = 'login' })
     return sessionId;
   };
 
-  // Redirect after login/signup with JWT
   const handleSuccess = async () => {
     const token = await auth.currentUser?.getIdToken();
     const redirectUrl = localStorage.getItem('auth_redirect_url') || '/dashboard';
@@ -82,6 +83,8 @@ const MinecraftAuthPage: React.FC<MinecraftAuthPageProps> = ({ mode = 'login' })
     setError('');
     setLoading(true);
 
+    const userAgent = navigator.userAgent;
+
     try {
       let userCredential;
 
@@ -91,7 +94,10 @@ const MinecraftAuthPage: React.FC<MinecraftAuthPageProps> = ({ mode = 'login' })
 
         await fetch('/api/users/login', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: {
+            'Content-Type': 'application/json',
+            'User-Agent': userAgent,
+          },
           body: JSON.stringify({
             email,
             password,
